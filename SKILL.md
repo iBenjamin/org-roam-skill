@@ -89,10 +89,10 @@ When creating notes, always handle sources with three link types:
 - Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | [[file:data/xx/NODE-ID/article.html][local]]
 ```
 
-**Local link path format:** `file:data/ID-PREFIX/NODE-ID/filename`
+**Local link path format:** `file:data/ID-PREFIX/ID-REMAINDER/filename`
 - `ID-PREFIX`: First 2 characters of node ID
-- `NODE-ID`: Full node ID (UUID)
-- Example: `file:data/ce/cee6aadd-4fbc-4768-b703-bc888f3be272/article.html`
+- `ID-REMAINDER`: Rest of node ID (without first 2 chars)
+- Example: ID `cee6aadd-4fbc-4768-b703-bc888f3be272` → `file:data/ce/e6aadd-4fbc-4768-b703-bc888f3be272/article.html`
 
 **Example workflow:**
 ```bash
@@ -121,7 +121,7 @@ ${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval '
 (let* ((node (org-roam-node-from-title-or-alias "Article Note"))
        (file (org-roam-node-file node))
        (id (org-roam-node-id node))
-       (attach-path (format "data/%s/%s" (substring id 0 2) id)))
+       (attach-path (format "data/%s/%s" (substring id 0 2) (substring id 2))))
   (with-current-buffer (find-file-noselect file)
     (goto-char (point-min))
     (while (search-forward "LOCAL_PLACEHOLDER" nil t)
