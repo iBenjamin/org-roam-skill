@@ -18,11 +18,12 @@ Detailed documentation for all org-roam-skill functions.
 
 Create a new org-roam note with auto-detection of template format.
 
-**Signature**: `(org-roam-skill-create-note TITLE &key tags content content-file keep-file)`
+**Signature**: `(org-roam-skill-create-note TITLE &key tags properties content content-file keep-file)`
 
 **Parameters:**
 - `TITLE` (string, required): The note title
 - `:tags` (list of strings, optional): Tags as `'("tag1" "tag2")` - **MUST be a list**
+- `:properties` (alist, optional): Additional properties for PROPERTIES drawer as `'(("KEY" . "value"))`
 - `:content` (string, optional): Initial content (for small/simple content)
 - `:content-file` (string, optional): Path to file containing content (for large content)
 - `:keep-file` (boolean, optional): If `t`, prevent automatic deletion of `:content-file`
@@ -37,6 +38,11 @@ ${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-create-
 With tags and content:
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-create-note \"React Hooks\" :tags '(\"javascript\" \"react\") :content \"Notes about hooks\")"
+```
+
+With AI-generated marking (tags + properties):
+```bash
+${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-create-note \"AI Note\" :tags '(\"ai_generated\" \"topic\") :properties '((\"GENERATOR\" . \"claude\") (\"MODEL\" . \"opus-4.5\") (\"GENERATED_AT\" . \"[2026-01-13 Mon]\")) :content \"Content here\")"
 ```
 
 Large content via file:

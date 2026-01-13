@@ -114,6 +114,46 @@ ${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-attach-
 
 **Note:** For archive.today links, either use an existing snapshot or submit the URL to archive.today first.
 
+### AI-Generated Content Marking
+
+All AI-generated notes MUST be clearly marked to identify potential hallucinations:
+
+1. **Tag**: Add `ai_generated` tag for quick filtering
+2. **Properties**: Add metadata in PROPERTIES drawer:
+   - `GENERATOR`: The AI system (e.g., `claude`)
+   - `MODEL`: The model used (e.g., `opus-4.5`)
+   - `GENERATED_AT`: Timestamp of generation
+
+**Required format:**
+```org
+#+filetags: :ai_generated:
+:PROPERTIES:
+:ID: xxx
+:GENERATOR: claude
+:MODEL: opus-4.5
+:GENERATED_AT: [2026-01-13 Mon]
+:END:
+#+title: Note Title
+```
+
+**Example with full marking:**
+```bash
+TEMP=$(mktemp -t org-roam-content.XXXXXX)
+cat > "$TEMP" << 'EOF'
+* Summary
+
+AI-generated content here...
+
+* References
+
+- Source: [[https://example.com][original]] | [[https://archive.today/xxx][archive]] | [[attachment:source.html][local]]
+EOF
+
+${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-create-note \"Note Title\" :tags '(\"ai_generated\" \"topic\") :properties '((\"GENERATOR\" . \"claude\") (\"MODEL\" . \"opus-4.5\") (\"GENERATED_AT\" . \"[2026-01-13 Mon]\")) :content-file \"$TEMP\")"
+```
+
+**Important:** Never omit AI marking. Users must be able to distinguish AI-generated content from human-written notes.
+
 ### Workflow A: Creating Notes
 
 **Simple note:**

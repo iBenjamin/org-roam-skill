@@ -16,13 +16,15 @@
 (require 'org-roam-skill-core)
 
 ;;;###autoload
-(cl-defun org-roam-skill-create-note (title &key tags content content-file keep-file)
-  "Create a new org-roam note with TITLE, optional TAGS and CONTENT.
+(cl-defun org-roam-skill-create-note (title &key tags properties content content-file keep-file)
+  "Create a new org-roam note with TITLE, optional TAGS, PROPERTIES and CONTENT.
 Automatically detect filename format and head content from capture
 templates. Work with any org-roam configuration - no customization
 required.
 
 TAGS is a list of tag strings.
+PROPERTIES is an alist of additional properties to add to the drawer,
+e.g., \\='((\"GENERATOR\" . \"claude\") (\"MODEL\" . \"opus-4.5\")).
 CONTENT can be provided as a string (small content) or via
 CONTENT-FILE path (recommended for large content). If both are
 provided, CONTENT-FILE takes priority.
@@ -54,9 +56,11 @@ Return the file path of the created note."
         (progn
           ;; Create the file with proper org-roam structure
           (with-temp-file file-path
-            ;; Insert PROPERTIES block with ID
+            ;; Insert PROPERTIES block with ID and custom properties
             (insert ":PROPERTIES:\n")
             (insert (format ":ID:       %s\n" node-id))
+            (dolist (prop properties)
+              (insert (format ":%s: %s\n" (car prop) (cdr prop))))
             (insert ":END:\n")
 
             ;; Insert head content if template specifies it
