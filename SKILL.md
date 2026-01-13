@@ -74,6 +74,46 @@ ${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-doctor)"
 
 ## Core Workflows
 
+### Source Management
+
+When creating notes, always handle sources with three link types:
+
+1. **Original URL**: The original source link
+2. **Archive.today**: Archived snapshot via archive.today (or archive.ph/archive.is)
+3. **Local capture**: Downloaded to note's attachments directory
+
+**References section format:**
+```org
+* References
+
+- Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | [[attachment:article.html][local]]
+```
+
+**Example workflow:**
+```bash
+# 1. Download web archive locally
+monolith "https://example.com/article" -o /tmp/article.html
+
+# 2. Create note with all three link types
+TEMP=$(mktemp -t org-roam-content.XXXXXX)
+cat > "$TEMP" << 'EOF'
+* Summary
+
+Key points...
+
+* References
+
+- Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | [[attachment:article.html][local]]
+EOF
+
+${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-create-note \"Article Note\" :tags '(\"reading\") :content-file \"$TEMP\")"
+
+# 3. Attach local archive
+${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-attach-file \"Article Note\" \"/tmp/article.html\")"
+```
+
+**Note:** For archive.today links, either use an existing snapshot or submit the URL to archive.today first.
+
 ### Workflow A: Creating Notes
 
 **Simple note:**
