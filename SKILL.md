@@ -80,21 +80,26 @@ When creating notes, always handle sources with three link types:
 
 1. **Original URL**: The original source link
 2. **Archive.today**: Archived snapshot via archive.today (or archive.ph/archive.is)
-3. **Local capture**: Downloaded to note's attachments directory
+3. **Local capture**: File link to attachment in `data/` directory
 
 **References section format:**
 ```org
 * References
 
-- Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | [[attachment:article.html][local]]
+- Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | [[file:data/xx/NODE-ID/article.html][local]]
 ```
+
+**Local link path format:** `file:data/ID-PREFIX/NODE-ID/filename`
+- `ID-PREFIX`: First 2 characters of node ID
+- `NODE-ID`: Full node ID (UUID)
+- Example: `file:data/ce/cee6aadd-4fbc-4768-b703-bc888f3be272/article.html`
 
 **Example workflow:**
 ```bash
 # 1. Download web archive locally
 monolith "https://example.com/article" -o /tmp/article.html
 
-# 2. Create note with all three link types
+# 2. Create note (with placeholder for local link)
 TEMP=$(mktemp -t org-roam-content.XXXXXX)
 cat > "$TEMP" << 'EOF'
 * Summary
@@ -103,13 +108,25 @@ Key points...
 
 * References
 
-- Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | [[attachment:article.html][local]]
+- Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | LOCAL_PLACEHOLDER
 EOF
 
-${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-create-note \"Article Note\" :tags '(\"reading\") :content-file \"$TEMP\")"
+NOTE_PATH=$(${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-create-note \"Article Note\" :tags '(\"reading\") :content-file \"$TEMP\")")
 
 # 3. Attach local archive
 ${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-attach-file \"Article Note\" \"/tmp/article.html\")"
+
+# 4. Update local link with correct path
+${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval '
+(let* ((node (org-roam-node-from-title-or-alias "Article Note"))
+       (file (org-roam-node-file node))
+       (id (org-roam-node-id node))
+       (attach-path (format "data/%s/%s" (substring id 0 2) id)))
+  (with-current-buffer (find-file-noselect file)
+    (goto-char (point-min))
+    (while (search-forward "LOCAL_PLACEHOLDER" nil t)
+      (replace-match (format "[[file:%s/article.html][local]]" attach-path)))
+    (save-buffer)))'
 ```
 
 **Note:** For archive.today links, either use an existing snapshot or submit the URL to archive.today first.
@@ -146,10 +163,12 @@ AI-generated content here...
 
 * References
 
-- Source: [[https://example.com][original]] | [[https://archive.today/xxx][archive]] | [[attachment:source.html][local]]
+- Source: [[https://example.com][original]] | [[https://archive.today/xxx][archive]] | LOCAL_PLACEHOLDER
 EOF
 
 ${CLAUDE_PLUGIN_ROOT}/skills/roam/scripts/org-roam-eval "(org-roam-skill-create-note \"Note Title\" :tags '(\"ai_generated\" \"topic\") :properties '((\"GENERATOR\" . \"claude\") (\"MODEL\" . \"opus-4.5\") (\"GENERATED_AT\" . \"[2026-01-13 Mon]\")) :content-file \"$TEMP\")"
+
+# After attaching files, update LOCAL_PLACEHOLDER with correct path (see Source Management workflow)
 ```
 
 **Important:** Never omit AI marking. Users must be able to distinguish AI-generated content from human-written notes.
