@@ -18,7 +18,7 @@ Detailed documentation for all org-roam-skill functions.
 
 Create a new org-roam note with auto-detection of template format.
 
-**Signature**: `(org-roam-skill-create-note TITLE &key tags properties content content-file keep-file)`
+**Signature**: `(org-roam-skill-create-note TITLE &key tags properties content content-file keep-file subdirectory)`
 
 **Parameters:**
 - `TITLE` (string, required): The note title
@@ -27,6 +27,9 @@ Create a new org-roam note with auto-detection of template format.
 - `:content` (string, optional): Initial content (for small/simple content)
 - `:content-file` (string, optional): Path to file containing content (for large content)
 - `:keep-file` (boolean, optional): If `t`, prevent automatic deletion of `:content-file`
+- `:subdirectory` (string, optional): Subdirectory within org-roam-directory (e.g., `"main"`, `"reference"`, `"projects"`, `"daily"`)
+- `:source-url` (string, optional): Original URL for reference notes. Automatically appends a References section with original link and archive.today submission link
+- `:open-archive` (boolean, optional): If `t`, automatically opens archive.today submission URL in browser after creating note (requires `:source-url`)
 
 **Examples:**
 
@@ -58,6 +61,30 @@ EOF
 ${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"Large Note\" :content-file \"$TEMP\")"
 # Temp file automatically deleted
 ```
+
+With subdirectory:
+```bash
+# Create in reference directory
+${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"Wikipedia: Linux\" :subdirectory \"reference\" :tags '(\"reference\"))"
+
+# Create in projects directory
+${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"Project Alpha Status\" :subdirectory \"projects\")"
+```
+
+With source URL (for reference notes):
+```bash
+# Creates note with auto-generated References section and opens browser
+${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"Git Worktree\" :subdirectory \"reference\" :source-url \"https://example.com/git-worktree\" :open-archive t :tags '(\"git\") :content \"* Summary\\n\\nContent here...\")"
+```
+
+The generated References section:
+```org
+* References
+
+- Git Worktree: [[https://example.com/git-worktree][original]] | [[https://archive.today/submit/?url=...][submit archive]]
+```
+
+With `:open-archive t`, browser automatically opens to archive.today submission page.
 
 **Content Format:**
 

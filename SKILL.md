@@ -72,64 +72,63 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-doctor)"
 
 **Key principle**: Package auto-loads on first call, then stays in memory - no repeated loading overhead.
 
+## Directory Classification
+
+Notes are organized into subdirectories within `org-roam-directory`:
+
+| Directory | Use Case | Examples |
+|-----------|----------|----------|
+| `daily` | Daily logs, journals, fleeting thoughts | 今日计划、随想、会议记录 |
+| `reference` | External sources, articles, docs | Wikipedia 摘要、新闻、API 文档、教程 |
+| `projects` | Project-specific notes | 项目名相关、任务跟踪、进度记录 |
+| `main` | Conceptual knowledge (default) | 技术原理、概念笔记、学习总结 |
+
+**Classification rules (Claude auto-selects):**
+1. User explicitly requests a category → use that
+2. Content is from external URL → `reference`
+3. User mentions "今天/today/日志/journal" → `daily`
+4. User mentions specific project name → `projects`
+5. Default → `main`
+
+**Usage with `:subdirectory` parameter:**
+```bash
+# Default (main directory)
+${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"DNS 记录类型\")"
+
+# Explicit subdirectory
+${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"项目A进度\" :subdirectory \"projects\")"
+${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"Wikipedia: Linux\" :subdirectory \"reference\")"
+```
+
 ## Core Workflows
 
 ### Source Management
 
-When creating notes, always handle sources with three link types:
+When creating reference notes from external URLs, use `:source-url`:
 
-1. **Original URL**: The original source link
-2. **Archive.today**: Archived snapshot via archive.today (or archive.ph/archive.is)
-3. **Local capture**: File link to attachment in `data/` directory
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"Article Title\" :subdirectory \"reference\" :source-url \"https://example.com/article\" :content \"...\")"
+```
 
-**References section format:**
+This:
+1. Generates a References section with original + archive links
+2. **Automatically opens browser** to archive.today submission page (for reference notes)
+
 ```org
 * References
 
-- Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | [[file:data/xx/NODE-ID/article.html][local]]
+- Article Title: [[https://example.com/article][original]] | [[https://archive.today/submit/?url=...][submit archive]]
 ```
 
-**Local link path format:** `file:data/ID-PREFIX/ID-REMAINDER/filename`
-- `ID-PREFIX`: First 2 characters of node ID
-- `ID-REMAINDER`: Rest of node ID (without first 2 chars)
-- Example: ID `cee6aadd-4fbc-4768-b703-bc888f3be272` → `file:data/ce/e6aadd-4fbc-4768-b703-bc888f3be272/article.html`
+**Workflow:**
+1. Create note with `:source-url` in reference subdirectory → browser auto-opens archive.today
+2. Complete captcha if needed, wait for archive
+3. Replace "submit archive" link with actual archive URL
 
-**Example workflow:**
-```bash
-# 1. Download web archive locally
-monolith "https://example.com/article" -o /tmp/article.html
-
-# 2. Create note (with placeholder for local link)
-TEMP=$(mktemp -t org-roam-content.XXXXXX)
-cat > "$TEMP" << 'EOF'
-* Summary
-
-Key points...
-
-* References
-
-- Example Article: [[https://example.com/article][original]] | [[https://archive.today/xxxxx][archive]] | LOCAL_PLACEHOLDER
-EOF
-
-NOTE_PATH=$(${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"Article Note\" :tags '(\"reading\") :content-file \"$TEMP\")")
-
-# 3. Attach local archive
-${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-attach-file \"Article Note\" \"/tmp/article.html\")"
-
-# 4. Update local link with correct path
-${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval '
-(let* ((node (org-roam-node-from-title-or-alias "Article Note"))
-       (file (org-roam-node-file node))
-       (id (org-roam-node-id node))
-       (attach-path (format "data/%s/%s" (substring id 0 2) (substring id 2))))
-  (with-current-buffer (find-file-noselect file)
-    (goto-char (point-min))
-    (while (search-forward "LOCAL_PLACEHOLDER" nil t)
-      (replace-match (format "[[file:%s/article.html][local]]" attach-path)))
-    (save-buffer)))'
-```
-
-**Note:** For archive.today links, either use an existing snapshot or submit the URL to archive.today first.
+**`:open-archive` behavior:**
+- `:default` (omitted): Auto-opens browser for `reference` subdirectory only
+- `t`: Always open browser
+- `nil`: Never open browser
 
 ### AI-Generated Content Marking
 
@@ -163,12 +162,10 @@ AI-generated content here...
 
 * References
 
-- Source: [[https://example.com][original]] | [[https://archive.today/xxx][archive]] | LOCAL_PLACEHOLDER
+- Source: [[https://example.com][original]] | [[https://archive.today/xxx][archive]]
 EOF
 
 ${CLAUDE_PLUGIN_ROOT}/scripts/org-roam-eval "(org-roam-skill-create-note \"Note Title\" :tags '(\"ai_generated\" \"topic\") :properties '((\"GENERATOR\" . \"claude\") (\"MODEL\" . \"opus-4.5\") (\"GENERATED_AT\" . \"[2026-01-13 Mon]\")) :content-file \"$TEMP\")"
-
-# After attaching files, update LOCAL_PLACEHOLDER with correct path (see Source Management workflow)
 ```
 
 **Important:** Never omit AI marking. Users must be able to distinguish AI-generated content from human-written notes.
